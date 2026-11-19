@@ -21,41 +21,35 @@ function chart(id,rows,m,title){
  const valid=rows.filter(r=>r[m]!==null&&r[m]!==undefined);
  const stamp=r=>r.time.getFullYear()+"-"+String(r.time.getMonth()+1).padStart(2,"0")+"-"+String(r.time.getDate()).padStart(2,"0")+" "+String(r.time.getHours()).padStart(2,"0")+":"+String(r.time.getMinutes()).padStart(2,"0")+":"+String(r.time.getSeconds()).padStart(2,"0");
  const categories=[...new Set(valid.map(stamp))].sort();
- // Treat each consecutive NE/cell run as its own line segment. A change of serving
- // identity ends the current line, even if the earlier identity appears again later.
+ // A serving-cell identity change ends the current line segment.
  const ordered=valid.map((r,i)=>({r,i})).sort((a,b)=>a.r.time-b.r.time||a.i-b.i);
- const segments=[];
- let current=null;
+ const segments=[];let current=null;
  for(const item of ordered){
-  const r=item.r, key=JSON.stringify([r.tech,r.ne,r.cell]);
-  if(!current||current.key!==key){
-   current={key,identity:[r.tech,r.ne,r.cell].join(" · "),rows:[]};
-   segments.push(current);
-  }
+  const r=item.r,key=JSON.stringify([r.tech,r.ne,r.cell]);
+  if(!current||current.key!==key){current={key,identity:[r.tech,r.ne,r.cell].join(" · "),rows:[]};segments.push(current)}
   current.rows.push(r);
  }
  const palette=["#636EFA","#EF553B","#00CC96","#AB63FA","#FFA15A","#19D3F3","#FF6692","#B6E880","#FF97FF","#FECB52","#1F77B4","#D62728"];
- const identityColors=new Map();
- const tracesSeen=new Set();
+ const identityColors=new Map(),legendItems=[];
  const traces=segments.map(seg=>{
-  if(!identityColors.has(seg.key))identityColors.set(seg.key,palette[identityColors.size%palette.length]);
-  const color=identityColors.get(seg.key),rs=seg.rows,showlegend=!tracesSeen.has(seg.key);tracesSeen.add(seg.key);
-  return {
-   x:rs.map(stamp),y:rs.map(r=>r[m]),type:"scatter",mode:"lines+markers",
-   name:seg.identity,legendgroup:seg.key,showlegend,
-   marker:{size:4,color},line:{width:1.5,color},connectgaps:false,
-   customdata:rs.map(r=>[r.ne,r.cell,r.tech,stamp(r)]),
-   hovertemplate:"%{x}<br>"+m.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"
-  };
+  if(!identityColors.has(seg.key)){identityColors.set(seg.key,palette[identityColors.size%palette.length]);legendItems.push({key:seg.key,name:seg.identity,color:identityColors.get(seg.key)})}
+  const color=identityColors.get(seg.key),rs=seg.rows;
+  return {x:rs.map(stamp),y:rs.map(r=>r[m]),type:"scatter",mode:"lines+markers",name:seg.identity,legendgroup:seg.key,showlegend:false,marker:{size:4,color},line:{width:1.35,color},connectgaps:false,customdata:rs.map(r=>[r.ne,r.cell,r.tech,stamp(r)]),hovertemplate:"%{x}<br>"+m.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"};
  });
  const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16));
- const legendCount=new Set(segments.map(s=>s.key)).size,legendCols=window.innerWidth<=800?1:2,legendRows=Math.max(1,Math.ceil(legendCount/legendCols));
- // Compact plot with a dedicated, clearly separated legend zone below the Time axis.
- const legendRowHeight=22,legendHeight=legendRows*legendRowHeight+64,plotHeight=270,chartHeight=plotHeight+42+legendHeight;
- const chartNode=document.getElementById(id);if(chartNode)chartNode.style.height=chartHeight+"px";
- const layout={height:chartHeight,title:{text:title,font:{size:13}},margin:{l:58,r:18,t:38,b:legendHeight},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:10,color:"#59697b"},xaxis:{title:{text:"Time",standoff:12},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",automargin:true},showlegend:true,legend:{orientation:"h",x:0,y:-0.30,xanchor:"left",yanchor:"top",traceorder:"grouped",font:{size:10},itemsizing:"trace",itemwidth:30,entrywidth:legendCols===1?0.96:0.48,entrywidthmode:"fraction"},hovermode:"closest"};
+ const chartNode=document.getElementById(id);if(!chartNode)return;
+ chartNode.style.height="300px";
+ const layout={height:300,title:{text:title,font:{size:14}},margin:{l:58,r:18,t:42,b:52},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
- Plotly.react(id,traces,layout,{responsive:true,displaylogo:false})
+ Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
+ let legend=chartNode.nextElementSibling;
+ if(!legend||!legend.classList.contains("chart-legend")){legend=document.createElement("div");legend.className="chart-legend";chartNode.insertAdjacentElement("afterend",legend)}
+ legend.innerHTML=legendItems.map((item,i)=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("");
+ legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
+  const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
+  btn.setAttribute("aria-pressed",hidden?"true":"false");
+  Plotly.restyle(chartNode,{visible:hidden?true:"legendonly"},indices);
+ }));
 }
 function technologyTrend(id,rows,metric,title){const byTech=new Map();for(const r of rows){if(r[metric]===null||r[metric]===undefined)continue;const tech=r.tech==="4G"?"EUTRAN":"NR NSA",t=new Date(r.time);t.setSeconds(0,0);const key=t.getTime();if(!byTech.has(tech))byTech.set(tech,new Map());const bucket=byTech.get(tech);if(!bucket.has(key))bucket.set(key,{sum:0,count:0});const b=bucket.get(key);b.sum+=r[metric];b.count++}const traces=[...byTech.entries()].map(([tech,buckets])=>{const pts=[...buckets.entries()].sort((a,b)=>a[0]-b[0]);return {type:"scatter",mode:"lines+markers",name:tech,x:pts.map(([t])=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}),y:pts.map(([,v])=>v.sum/v.count),customdata:pts.map(([,v])=>[v.count]),marker:{size:6},line:{width:2.5},hovertemplate:"%{x}<br>"+metric.toUpperCase()+" average: %{y:.1f}<br>Technology: "+tech+"<br>Samples in minute: %{customdata[0]}<extra></extra>"}});const categories=[...new Set([...byTech.values()].flatMap(b=>[...b.keys()].map(t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")})))].sort();const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16)),layout={title:{text:title,font:{size:14}},margin:{l:60,r:18,t:45,b:145},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:"Time",type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5"},yaxis:{title:metric.toUpperCase()+(metric==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5"},showlegend:true,legend:{orientation:"h",x:0,y:-0.46,xanchor:"left",yanchor:"top",traceorder:"grouped",font:{size:10},itemsizing:"trace",entrywidth:0.48,entrywidthmode:"fraction"},hovermode:"closest"};if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];Plotly.react(id,traces,layout,{responsive:true,displaylogo:false})}function charts(rows=filteredRows()){const m=$("metricFilter").value;document.querySelectorAll(".chart-card").forEach(e=>e.style.display=m!=="all"&&e.dataset.metric!==m?"none":"block");chart("c4rsrp",rows.filter(r=>r.tech==="4G"),"rsrp","4G EUTRAN RSRP · Cell Name");chart("c4rsrq",rows.filter(r=>r.tech==="4G"),"rsrq","4G EUTRAN RSRQ · Cell Name");chart("c5rsrp",rows.filter(r=>r.tech==="5G"),"rsrp","5G NR NSA RSRP (SSB) · Cell Name");chart("c5rsrq",rows.filter(r=>r.tech==="5G"),"rsrq","5G NR NSA RSRQ (SSB) · Cell Name");chart("cmrsrp",rows,"rsrp","Mixed 4G + 5G RSRP · NE / Cell Name");chart("cmrsrq",rows,"rsrq","Mixed 4G + 5G RSRQ · NE / Cell Name");technologyTrend("ctechrsrp",rows,"rsrp","Technology trend · EUTRAN vs NR NSA RSRP");technologyTrend("ctechrsrq",rows,"rsrq","Technology trend · EUTRAN vs NR NSA RSRQ")}
 function mapDraw(rows){if(!state.map){state.map=L.map("map").setView([-2.5,118],4);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.map)}state.markers.forEach(x=>x.remove());state.markers=[];const allBad=rows.filter(bad),category=r=>{const a=r.rsrp!==null&&r.rsrp< -105,b=r.rsrq!==null&&r.rsrq< -16;return a&&b?"both":a?"rsrp":b?"rsrq":null},degraded=allBad.filter(r=>state.mapTypes.has(category(r))),pts=degraded.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&Math.abs(r.lat)<=90&&Math.abs(r.lon)<=180);pts.forEach(r=>{const a=r.rsrp!==null&&r.rsrp< -105,b=r.rsrq!==null&&r.rsrq< -16,c=a&&b?"#8656bd":a?"#d63d43":"#e58b25";const x=L.circleMarker([r.lat,r.lon],{radius:7,color:"#fff",weight:1.5,fillColor:c,fillOpacity:.9}).bindPopup("<b>"+r.tech+"</b><br>"+esc(stamp(r.time))+"<br>NE: "+esc(r.ne)+"<br>Cell: "+esc(r.cell)+"<br>"+esc(issue(r))+"<br>RSRP: "+(r.rsrp??"N/A")+" dBm<br>RSRQ: "+(r.rsrq??"N/A")+" dB<br>"+r.lat+", "+r.lon).addTo(state.map);state.markers.push(x)});if(pts.length)state.map.fitBounds(L.latLngBounds(pts.map(r=>[r.lat,r.lon])).pad(.15),{maxZoom:15});const selected=[...state.mapTypes].map(x=>({rsrp:"Bad RSRP",rsrq:"Bad RSRQ",both:"Both"}[x])).join(", ")||"None";$("mapSummary").textContent=selected+": "+pts.length+" location point(s) plotted. "+(degraded.length-pts.length)+" selected degraded record(s) without valid coordinates.";document.querySelectorAll(".map-filter").forEach(b=>b.classList.toggle("active",b.dataset.mapType==="all"?state.mapTypes.size===3:b.dataset.mapType!=="all"&&state.mapTypes.has(b.dataset.mapType)));setTimeout(()=>state.map.invalidateSize(),100)}
