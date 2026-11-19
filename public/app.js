@@ -48,7 +48,11 @@ function chart(id,rows,m,title){
    hovertemplate:"%{x}<br>"+m.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"
   };
  });
- const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16)),layout={title:{text:title,font:{size:13}},margin:{l:55,r:18,t:42,b:Math.max(190,110+Math.ceil(new Set(segments.map(s=>s.key)).size/2)*25)},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:10,color:"#59697b"},xaxis:{title:"Time",type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5"},showlegend:true,legend:{orientation:"h",x:0,y:-0.46,xanchor:"left",yanchor:"top",traceorder:"grouped",font:{size:10},itemsizing:"trace",entrywidth:0.48,entrywidthmode:"fraction"},hovermode:"closest"};
+ const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16));
+ const legendCount=new Set(segments.map(s=>s.key)).size,legendCols=window.innerWidth<=800?1:2,legendRows=Math.max(1,Math.ceil(legendCount/legendCols));
+ const legendHeight=legendRows*25+28,chartHeight=310+42+legendHeight;
+ const chartNode=document.getElementById(id);if(chartNode)chartNode.style.height=chartHeight+"px";
+ const layout={height:chartHeight,title:{text:title,font:{size:13}},margin:{l:55,r:18,t:42,b:legendHeight},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:"Time",type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",automargin:true},showlegend:true,legend:{orientation:"h",x:0,y:-0.08,xanchor:"left",yanchor:"top",traceorder:"grouped",font:{size:11},itemsizing:"trace",entrywidth:legendCols===1?0.96:0.48,entrywidthmode:"fraction"},hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false})
 }
