@@ -44,7 +44,7 @@ function chart(id,rows,m,title){
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
  let legend=document.getElementById(id+"Legend");
  if(!legend){legend=document.createElement("div");legend.id=id+"Legend";legend.className="chart-legend";chartNode.insertAdjacentElement("afterend",legend)}
- legend.innerHTML="<div class=\\"chart-legend-heading\\">Legend — NE / Cell Name</div><div class=\\"chart-legend-list\\">"+legendItems.map(item=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'><span><b>NE:</b> "+esc(item.ne)+"</span><span><b>Cell:</b> "+esc(item.cell)+"</span></span></button>").join("")+"</div>";
+ legend.innerHTML = `<div class="chart-legend-heading">Legend — NE / Cell Name</div><div class="chart-legend-list">${legendItems.map(item => `<button type="button" class="chart-legend-item" data-key="${esc(item.key)}" aria-pressed="true" title="${esc(item.name)}"><span class="chart-legend-symbol" style="--series-color:${item.color}"><i></i></span><span class="chart-legend-label"><span><b>NE:</b> ${esc(item.ne)}</span><span><b>Cell:</b> ${esc(item.cell)}</span></span></button>`).join("")}</div>`;
  legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
   btn.setAttribute("aria-pressed",hidden?"true":"false");
