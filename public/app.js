@@ -36,14 +36,16 @@ function chart(id,rows,m,title){
   const color=identityColors.get(seg.key),rs=seg.rows;
   return {x:rs.map(stamp),y:rs.map(r=>r[m]),type:"scatter",mode:"lines+markers",name:seg.identity,legendgroup:seg.key,showlegend:false,marker:{size:4,color},line:{width:1.35,color},connectgaps:false,customdata:rs.map(r=>[r.ne,r.cell,r.tech,stamp(r)]),hovertemplate:"%{x}<br>"+m.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"};
  });
- const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16));
+ const tickStep=Math.max(1,Math.ceil(categories.length/14)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>{const d=new Date(v.replace(" ","T"));return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
  const chartNode=document.getElementById(id);if(!chartNode)return;
- chartNode.style.height="240px";
- const layout={height:240,title:{text:title,font:{size:14}},margin:{l:58,r:18,t:42,b:52},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
+ chartNode.style.height="300px";
+ const layout={height:300,title:{text:title,font:{size:14}},margin:{l:58,r:12,t:42,b:105},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:-90,nticks:14,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
- let legend=chartNode.nextElementSibling;
- if(!legend||!legend.classList.contains("chart-legend")){legend=document.createElement("div");legend.className="chart-legend";chartNode.insertAdjacentElement("afterend",legend)}
+ let visual=chartNode.parentElement.querySelector(".chart-visual-layout");
+ if(!visual){visual=document.createElement("div");visual.className="chart-visual-layout";chartNode.parentElement.insertBefore(visual,chartNode);visual.appendChild(chartNode)}
+ let legend=visual.querySelector(".chart-legend");
+ if(!legend){legend=document.createElement("div");legend.className="chart-legend";visual.appendChild(legend)}
  legend.innerHTML=legendItems.map((item,i)=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("");
  legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
