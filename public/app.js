@@ -32,7 +32,7 @@ function chart(id,rows,m,title){
  const palette=["#636EFA","#EF553B","#00CC96","#AB63FA","#FFA15A","#19D3F3","#FF6692","#B6E880","#FF97FF","#FECB52","#1F77B4","#D62728"];
  const identityColors=new Map(),legendItems=[];
  const traces=segments.map(seg=>{
-  if(!identityColors.has(seg.key)){identityColors.set(seg.key,palette[identityColors.size%palette.length]);legendItems.push({key:seg.key,name:seg.identity,color:identityColors.get(seg.key)})}
+  if(!identityColors.has(seg.key)){identityColors.set(seg.key,palette[identityColors.size%palette.length]);legendItems.push({key:seg.key,name:seg.identity,ne:seg.rows[0].ne||"Unknown NE",cell:seg.rows[0].cell||"Unknown Cell",color:identityColors.get(seg.key)})}
   const color=identityColors.get(seg.key),rs=seg.rows;
   return {x:rs.map(stamp),y:rs.map(r=>r[m]),type:"scatter",mode:"lines+markers",name:seg.identity,legendgroup:seg.key,showlegend:false,marker:{size:4,color},line:{width:1.35,color},connectgaps:false,customdata:rs.map(r=>[r.ne,r.cell,r.tech,stamp(r)]),hovertemplate:"%{x}<br>"+m.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"};
  });
@@ -44,7 +44,7 @@ function chart(id,rows,m,title){
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
  let legend=document.getElementById(id+"Legend");
  if(!legend){legend=document.createElement("div");legend.id=id+"Legend";legend.className="chart-legend";chartNode.insertAdjacentElement("afterend",legend)}
- legend.innerHTML="<div class=\"chart-legend-heading\">Legend — NE / Cell Name</div><div class=\"chart-legend-list\">"+legendItems.map(item=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("")+"</div>";
+ legend.innerHTML="<div class=\\"chart-legend-heading\\">Legend — NE / Cell Name</div><div class=\\"chart-legend-list\\">"+legendItems.map(item=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'><span><b>NE:</b> "+esc(item.ne)+"</span><span><b>Cell:</b> "+esc(item.cell)+"</span></span></button>").join("")+"</div>";
  legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
   btn.setAttribute("aria-pressed",hidden?"true":"false");
