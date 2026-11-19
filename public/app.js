@@ -42,11 +42,9 @@ function chart(id,rows,m,title){
  const layout={height:285,title:{text:title,font:{size:14}},margin:{l:58,r:12,t:42,b:78},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:-90,nticks:14,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
- let visual=chartNode.parentElement.querySelector(".chart-visual-layout");
- if(!visual){visual=document.createElement("div");visual.className="chart-visual-layout";chartNode.parentElement.insertBefore(visual,chartNode);visual.appendChild(chartNode)}
- let legend=visual.querySelector(".chart-legend");
- if(!legend){legend=document.createElement("div");legend.className="chart-legend";visual.appendChild(legend)}
- legend.innerHTML="<div class=\"chart-legend-heading\">Legend — NE / Cell Name</div><div class=\"chart-legend-list\">"+legendItems.map((item,i)=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("")+"</div>";
+ let legend=document.getElementById(id+"Legend");
+ if(!legend){legend=document.createElement("div");legend.id=id+"Legend";legend.className="chart-legend";chartNode.insertAdjacentElement("afterend",legend)}
+ legend.innerHTML="<div class=\"chart-legend-heading\">Legend — NE / Cell Name</div><div class=\"chart-legend-list\">"+legendItems.map(item=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("")+"</div>";
  legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
   btn.setAttribute("aria-pressed",hidden?"true":"false");
