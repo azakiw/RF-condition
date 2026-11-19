@@ -5,8 +5,8 @@
 .chart-legend-item:hover .chart-legend-label{color:#17283b;text-decoration:underline}
 .chart-legend-item[aria-pressed="false"]{opacity:.35}
 .chart-legend-symbol{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 20px;width:20px;height:12px;margin-top:2px}
-.chart-legend-symbol:before{content:"";display:block;width:20px;border-top:1.4px solid var(--series-color)}
-.chart-legend-symbol i{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--series-color)}
+.chart-legend-symbol:before{content:"";display:block;width:20px;border-top:1.8px solid var(--series-color)}
+.chart-legend-symbol i{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--series-color)}
 .chart-legend-label{min-width:0;overflow-wrap:anywhere;word-break:normal}
 @media(max-width:1000px){.chart-legend{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}}
 @media(max-width:620px){.chart-legend{grid-template-columns:1fr;row-gap:5px}.chart-legend-item{font-size:11px}}
