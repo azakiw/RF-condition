@@ -38,8 +38,8 @@ function chart(id,rows,m,title){
  });
  const tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(11,16));
  const chartNode=document.getElementById(id);if(!chartNode)return;
- chartNode.style.height="300px";
- const layout={height:300,title:{text:title,font:{size:14}},margin:{l:58,r:18,t:42,b:52},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
+ chartNode.style.height="240px";
+ const layout={height:240,title:{text:title,font:{size:14}},margin:{l:58,r:18,t:42,b:52},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
  let legend=chartNode.nextElementSibling;
