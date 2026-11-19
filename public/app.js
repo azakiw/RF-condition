@@ -26,7 +26,7 @@ function chart(id,rows,m,title){
  const segments=[];let current=null;
  for(const item of ordered){
   const r=item.r,key=JSON.stringify([r.tech,r.ne,r.cell]);
-  if(!current||current.key!==key){current={key,identity:[r.tech,r.ne,r.cell].join(" · "),rows:[]};segments.push(current)}
+  if(!current||current.key!==key){current={key,identity:r.tech+" | NE: "+(r.ne||"Unknown NE")+" | Cell Name: "+(r.cell||"Unknown Cell"),rows:[]};segments.push(current)}
   current.rows.push(r);
  }
  const palette=["#636EFA","#EF553B","#00CC96","#AB63FA","#FFA15A","#19D3F3","#FF6692","#B6E880","#FF97FF","#FECB52","#1F77B4","#D62728"];
@@ -38,15 +38,15 @@ function chart(id,rows,m,title){
  });
  const tickStep=Math.max(1,Math.ceil(categories.length/14)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>{const d=new Date(v.replace(" ","T"));return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
  const chartNode=document.getElementById(id);if(!chartNode)return;
- chartNode.style.height="300px";
- const layout={height:300,title:{text:title,font:{size:14}},margin:{l:58,r:12,t:42,b:105},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:-90,nticks:14,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
+ chartNode.style.height="285px";
+ const layout={height:285,title:{text:title,font:{size:14}},margin:{l:58,r:12,t:42,b:78},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:{text:"Time",standoff:10},type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:-90,nticks:14,gridcolor:"#edf1f5",automargin:true},yaxis:{title:m.toUpperCase()+(m==="rsrp"?" (dBm)":" (dB)"),dtick:m==="rsrp"?20:5,gridcolor:"#edf1f5",automargin:true},showlegend:false,hovermode:"closest"};
  if(!traces.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
  let visual=chartNode.parentElement.querySelector(".chart-visual-layout");
  if(!visual){visual=document.createElement("div");visual.className="chart-visual-layout";chartNode.parentElement.insertBefore(visual,chartNode);visual.appendChild(chartNode)}
  let legend=visual.querySelector(".chart-legend");
  if(!legend){legend=document.createElement("div");legend.className="chart-legend";visual.appendChild(legend)}
- legend.innerHTML=legendItems.map((item,i)=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("");
+ legend.innerHTML="<div class=\"chart-legend-heading\">Legend — NE / Cell Name</div><div class=\"chart-legend-list\">"+legendItems.map((item,i)=>"<button type='button' class='chart-legend-item' data-key='"+esc(item.key)+"' aria-pressed='true' title='"+esc(item.name)+"'><span class='chart-legend-symbol' style='--series-color:"+item.color+"'><i></i></span><span class='chart-legend-label'>"+esc(item.name)+"</span></button>").join("")+"</div>";
  legend.querySelectorAll(".chart-legend-item").forEach(btn=>btn.addEventListener("click",()=>{
   const key=btn.dataset.key,hidden=btn.getAttribute("aria-pressed")==="false",indices=traces.map((t,i)=>t.legendgroup===key?i:-1).filter(i=>i>=0);
   btn.setAttribute("aria-pressed",hidden?"true":"false");
