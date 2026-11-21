@@ -51,7 +51,52 @@ function chart(id,rows,m,title){
   Plotly.restyle(chartNode,{visible:hidden?true:"legendonly"},indices);
  }));
 }
-function technologyTrend(id,rows,metric,title){const stamp=r=>r.time.getFullYear()+"-"+String(r.time.getMonth()+1).padStart(2,"0")+"-"+String(r.time.getDate()).padStart(2,"0")+" "+String(r.time.getHours()).padStart(2,"0")+":"+String(r.time.getMinutes()).padStart(2,"0")+":"+String(r.time.getSeconds()).padStart(2,"0"),valid=rows.filter(r=>r[metric]!==null&&r[metric]!==undefined),categories=[...new Set(valid.map(stamp))].sort(),techGroups=[{key:"4G",name:"EUTRAN"},{key:"5G",name:"5G NR NSA"}],traces=techGroups.map(t=>{const rs=valid.filter(r=>r.tech===t.key).sort((a,b)=>a.time-b.time);return {type:"scatter",mode:"lines+markers",name:t.name,x:rs.map(stamp),y:rs.map(r=>r[metric]),customdata:rs.map(r=>[r.ne,r.cell,t.name,stamp(r)]),marker:{size:4},line:{width:1.8},connectgaps:false,hovertemplate:"%{x}<br>"+metric.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"}}),tickStep=Math.max(1,Math.ceil(categories.length/7)),tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1),ticktext=tickvals.map(v=>v.slice(8,10)+"/"+v.slice(5,7)+" "+v.slice(11,16)),layout={title:{text:title,font:{size:14}},margin:{l:60,r:20,t:45,b:90},paper_bgcolor:"#fff",plot_bgcolor:"#fff",font:{size:11,color:"#59697b"},xaxis:{title:"Time",type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5"},yaxis:{title:metric.toUpperCase()+(metric==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",dtick:metric==="rsrp"?10:5},showlegend:true,legend:{orientation:"h",y:-.32,x:0,traceorder:"normal"},hovermode:"closest"};if(!valid.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];Plotly.react(id,traces,layout,{responsive:true,displaylogo:false})}function charts(rows=filteredRows()){const m=$("metricFilter").value;document.querySelectorAll(".chart-card").forEach(e=>e.style.display=m!=="all"&&e.dataset.metric!==m?"none":"block");chart("c4rsrp",rows.filter(r=>r.tech==="4G"),"rsrp","4G EUTRAN RSRP · Cell Name");chart("c4rsrq",rows.filter(r=>r.tech==="4G"),"rsrq","4G EUTRAN RSRQ · Cell Name");chart("c5rsrp",rows.filter(r=>r.tech==="5G"),"rsrp","5G NR NSA RSRP (SSB) · Cell Name");chart("c5rsrq",rows.filter(r=>r.tech==="5G"),"rsrq","5G NR NSA RSRQ (SSB) · Cell Name");chart("cmrsrp",rows,"rsrp","4G + 5G RSRP · NE / Cell Name");chart("cmrsrq",rows,"rsrq","4G + 5G RSRQ · NE / Cell Name");technologyTrend("ctechrsrp",rows,"rsrp","Technology trend · EUTRAN vs NR NSA RSRP");technologyTrend("ctechrsrq",rows,"rsrq","Technology trend · EUTRAN vs NR NSA RSRQ")}
+function technologyTrend(id,rows,metric,title){
+ const stamp=r=>r.time.getFullYear()+"-"+String(r.time.getMonth()+1).padStart(2,"0")+"-"+String(r.time.getDate()).padStart(2,"0")+" "+String(r.time.getHours()).padStart(2,"0")+":"+String(r.time.getMinutes()).padStart(2,"0")+":"+String(r.time.getSeconds()).padStart(2,"0");
+ const valid=rows.filter(r=>r[metric]!==null&&r[metric]!==undefined);
+ const categories=[...new Set(valid.map(stamp))].sort();
+ const techGroups=[{key:"4G",name:"EUTRAN",color:"#1f77b4"},{key:"5G",name:"5G NR NSA",color:"#ff7f0e"}];
+ const traces=techGroups.map(t=>{
+  const techRows=valid.filter(r=>r.tech===t.key);
+  const byCell=new Map();
+  techRows.forEach((r,i)=>{
+   const key=JSON.stringify([r.ne||"Unknown NE",r.cell||"Unknown Cell"]);
+   if(!byCell.has(key))byCell.set(key,[]);
+   byCell.get(key).push({r,i});
+  });
+  const x=[],y=[],customdata=[];
+  // Keep every original serving-cell sample. Draw each cell as a separate
+  // segment within its technology trace so lines never jump between cells.
+  // Null separators break the line without removing any measurement points.
+  const segments=[...byCell.values()].map(items=>items.sort((a,b)=>a.r.time-b.r.time||a.i-b.i));
+  segments.forEach((items,segmentIndex)=>{
+   if(segmentIndex){x.push(null);y.push(null);customdata.push([null,null,null,null]);}
+   items.forEach(({r})=>{
+    x.push(stamp(r));y.push(r[metric]);
+    customdata.push([r.ne||"Unknown NE",r.cell||"Unknown Cell",t.name,stamp(r)]);
+   });
+  });
+  return {
+   type:"scatter",mode:"lines+markers",name:t.name,x,y,customdata,
+   marker:{size:4,color:t.color},line:{width:1.8,color:t.color},
+   connectgaps:false,
+   hovertemplate:"%{x}<br>"+metric.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"
+  };
+ });
+ const tickStep=Math.max(1,Math.ceil(categories.length/7));
+ const tickvals=categories.filter((v,i)=>i%tickStep===0||i===categories.length-1);
+ const ticktext=tickvals.map(v=>v.slice(8,10)+"/"+v.slice(5,7)+" "+v.slice(11,16));
+ const layout={
+  title:{text:title,font:{size:14}},
+  margin:{l:60,r:20,t:45,b:90},paper_bgcolor:"#fff",plot_bgcolor:"#fff",
+  font:{size:11,color:"#59697b"},
+  xaxis:{title:"Time",type:"category",categoryorder:"array",categoryarray:categories,tickmode:"array",tickvals,ticktext,tickangle:0,nticks:7,gridcolor:"#edf1f5"},
+  yaxis:{title:metric.toUpperCase()+(metric==="rsrp"?" (dBm)":" (dB)"),gridcolor:"#edf1f5",dtick:metric==="rsrp"?10:5},
+  showlegend:true,legend:{orientation:"h",y:-.32,x:0,traceorder:"normal"},hovermode:"closest"
+ };
+ if(!valid.length)layout.annotations=[{text:"No records match the current filters",showarrow:false,x:.5,y:.5,xref:"paper",yref:"paper"}];
+ Plotly.react(id,traces,layout,{responsive:true,displaylogo:false});
+}function charts(rows=filteredRows()){const m=$("metricFilter").value;document.querySelectorAll(".chart-card").forEach(e=>e.style.display=m!=="all"&&e.dataset.metric!==m?"none":"block");chart("c4rsrp",rows.filter(r=>r.tech==="4G"),"rsrp","4G EUTRAN RSRP · Cell Name");chart("c4rsrq",rows.filter(r=>r.tech==="4G"),"rsrq","4G EUTRAN RSRQ · Cell Name");chart("c5rsrp",rows.filter(r=>r.tech==="5G"),"rsrp","5G NR NSA RSRP (SSB) · Cell Name");chart("c5rsrq",rows.filter(r=>r.tech==="5G"),"rsrq","5G NR NSA RSRQ (SSB) · Cell Name");chart("cmrsrp",rows,"rsrp","4G + 5G RSRP · NE / Cell Name");chart("cmrsrq",rows,"rsrq","4G + 5G RSRQ · NE / Cell Name");technologyTrend("ctechrsrp",rows,"rsrp","Technology trend · EUTRAN vs NR NSA RSRP");technologyTrend("ctechrsrq",rows,"rsrq","Technology trend · EUTRAN vs NR NSA RSRQ")}
 function mapDraw(rows){if(!state.map){state.map=L.map("map").setView([-2.5,118],4);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.map)}state.markers.forEach(x=>x.remove());state.markers=[];const allBad=rows.filter(bad),category=r=>{const a=r.rsrp!==null&&r.rsrp< -105,b=r.rsrq!==null&&r.rsrq< -16;return a&&b?"both":a?"rsrp":b?"rsrq":null},degraded=allBad.filter(r=>state.mapTypes.has(category(r))),pts=degraded.filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)&&Math.abs(r.lat)<=90&&Math.abs(r.lon)<=180);pts.forEach(r=>{const a=r.rsrp!==null&&r.rsrp< -105,b=r.rsrq!==null&&r.rsrq< -16,c=a&&b?"#8656bd":a?"#d63d43":"#e58b25";const x=L.circleMarker([r.lat,r.lon],{radius:7,color:"#fff",weight:1.5,fillColor:c,fillOpacity:.9}).bindPopup("<b>"+r.tech+"</b><br>"+esc(stamp(r.time))+"<br>NE: "+esc(r.ne)+"<br>Cell: "+esc(r.cell)+"<br>"+esc(issue(r))+"<br>RSRP: "+(r.rsrp??"N/A")+" dBm<br>RSRQ: "+(r.rsrq??"N/A")+" dB<br>"+r.lat+", "+r.lon).addTo(state.map);state.markers.push(x)});if(pts.length)state.map.fitBounds(L.latLngBounds(pts.map(r=>[r.lat,r.lon])).pad(.15),{maxZoom:15});const selected=[...state.mapTypes].map(x=>({rsrp:"Bad RSRP",rsrq:"Bad RSRQ",both:"Both"}[x])).join(", ")||"None";$("mapSummary").textContent=selected+": "+pts.length+" location point(s) plotted. "+(degraded.length-pts.length)+" selected degraded record(s) without valid coordinates.";document.querySelectorAll(".map-filter").forEach(b=>b.classList.toggle("active",b.dataset.mapType==="all"?state.mapTypes.size===3:b.dataset.mapType!=="all"&&state.mapTypes.has(b.dataset.mapType)));setTimeout(()=>state.map.invalidateSize(),100)}
 function update(){const rows=filteredRows(),valid=rows.filter(r=>r.rsrp!==null||r.rsrq!==null),degraded=rows.filter(bad);$("n4").textContent=rows.filter(r=>r.tech==="4G").length.toLocaleString();$("n5").textContent=rows.filter(r=>r.tech==="5G").length.toLocaleString();$("badCount").textContent=degraded.length.toLocaleString();$("badPct").textContent=valid.length?(100*degraded.length/valid.length).toFixed(1)+"%":"—";$("file4name").textContent=state.four[0]?.source||"No file loaded";$("file5name").textContent=state.five[0]?.source||"No file loaded";$("status").textContent=rows.length?rows.length.toLocaleString()+" filtered serving-cell samples":"No records match filters";$("exportBtn").disabled=!degraded.length;$("badRows").innerHTML=degraded.length?degraded.slice(0,1000).map(r=>"<tr><td>"+r.tech+"</td><td>"+esc(stamp(r.time))+"</td><td class='issue'>"+esc(issue(r))+"</td><td>"+(r.rsrp??"—")+"</td><td>"+(r.rsrq??"—")+"</td><td>"+(r.lat??"—")+"</td><td>"+(r.lon??"—")+"</td><td>"+esc(r.ne)+" / "+esc(r.cell)+"</td></tr>").join(""):"<tr><td colspan='8' class='empty'>No degraded records found for current filters.</td></tr>";mapDraw(rows);charts(rows)}
 async function upload(input,tech){const file=input.files[0];if(!file)return;$("status").textContent="Reading "+tech+" file…";try{const p=await loadFile(file,tech);if(tech==="4G")state.four=p.rows;else state.five=p.rows;refreshFilterOptions();$("fileInfo").textContent=tech+" loaded: "+p.rows.length.toLocaleString()+" Serving Cell records · worksheet: "+p.sheet+". NE "+(p.hasNE?"read from dedicated column":p.derivedNE?"extracted from Measurement Object":"not identified")+"; Cell Name "+(p.hasCell?"read from dedicated column":p.derivedCell?"extracted from Measurement Object":"not identified")+". Uploading a new file replaces the previous dataset for this technology.";update()}catch(e){$("status").textContent="Upload error";$("fileInfo").textContent="Error: "+e.message;input.value=""}}
