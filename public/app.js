@@ -55,31 +55,31 @@ function technologyTrend(id,rows,metric,title){
  const stamp=r=>r.time.getFullYear()+"-"+String(r.time.getMonth()+1).padStart(2,"0")+"-"+String(r.time.getDate()).padStart(2,"0")+" "+String(r.time.getHours()).padStart(2,"0")+":"+String(r.time.getMinutes()).padStart(2,"0")+":"+String(r.time.getSeconds()).padStart(2,"0");
  const valid=rows.filter(r=>r[metric]!==null&&r[metric]!==undefined);
  const categories=[...new Set(valid.map(stamp))].sort();
- const techGroups=[{key:"4G",name:"EUTRAN",color:"#1f77b4"},{key:"5G",name:"5G NR NSA",color:"#ff7f0e"}];
- const traces=techGroups.map(t=>{
-  const techRows=valid.filter(r=>r.tech===t.key);
-  const byCell=new Map();
-  techRows.forEach((r,i)=>{
-   const key=JSON.stringify([r.ne||"Unknown NE",r.cell||"Unknown Cell"]);
-   if(!byCell.has(key))byCell.set(key,[]);
-   byCell.get(key).push({r,i});
-  });
-  const x=[],y=[],customdata=[];
-  // Keep every original serving-cell sample. Draw each cell as a separate
-  // segment within its technology trace so lines never jump between cells.
-  // Null separators break the line without removing any measurement points.
-  const segments=[...byCell.values()].map(items=>items.sort((a,b)=>a.r.time-b.r.time||a.i-b.i));
-  segments.forEach((items,segmentIndex)=>{
-   if(segmentIndex){x.push(null);y.push(null);customdata.push([null,null,null,null]);}
-   items.forEach(({r})=>{
-    x.push(stamp(r));y.push(r[metric]);
-    customdata.push([r.ne||"Unknown NE",r.cell||"Unknown Cell",t.name,stamp(r)]);
-   });
-  });
+ const techStyle={"4G":{name:"EUTRAN",color:"#1f77b4"},"5G":{name:"5G NR NSA",color:"#ff7f0e"}};
+ // Match the NE/Cell Name chart's segmentation: sort all samples by time,
+ // then start a new line whenever the serving cell or technology changes.
+ // This prevents a line from jumping between different cells.
+ const ordered=valid.map((r,i)=>({r,i})).sort((a,b)=>a.r.time-b.r.time||a.i-b.i);
+ const segments=[];let current=null;
+ for(const item of ordered){
+  const r=item.r,key=JSON.stringify([r.tech,r.ne||"Unknown NE",r.cell||"Unknown Cell"]);
+  if(!current||current.key!==key){
+   current={key,tech:r.tech,rows:[]};segments.push(current);
+  }
+  current.rows.push(r);
+ }
+ const shownLegend=new Set();
+ const traces=segments.map(seg=>{
+  const style=techStyle[seg.tech]||techStyle["4G"];
+  const showlegend=!shownLegend.has(seg.tech);shownLegend.add(seg.tech);
+  const rs=seg.rows;
   return {
-   type:"scatter",mode:"lines+markers",name:t.name,x,y,customdata,
-   marker:{size:4,color:t.color},line:{width:1.8,color:t.color},
+   type:"scatter",mode:"lines+markers",name:style.name,legendgroup:seg.tech,showlegend,
+   x:rs.map(stamp),y:rs.map(r=>r[metric]),
+   marker:{size:4,color:style.color},
+   line:{width:1.8,color:style.color},
    connectgaps:false,
+   customdata:rs.map(r=>[r.ne||"Unknown NE",r.cell||"Unknown Cell",style.name,stamp(r)]),
    hovertemplate:"%{x}<br>"+metric.toUpperCase()+": %{y:.1f}<br>Technology: %{customdata[2]}<br>NE: %{customdata[0]}<br>Cell Name: %{customdata[1]}<br>Measurement Time: %{customdata[3]}<extra></extra>"
   };
  });
