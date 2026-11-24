@@ -27,13 +27,13 @@ let DATA=[];
 const $=id=>document.getElementById(id);
 $('thresholds').innerHTML=specs.map(s=>'<div>⚠️ '+s.label+': '+s.threshold+'</div>').join('');
 function num(v){if(v===null||v===undefined||v==='')return null;let n=Number(v);return Number.isFinite(n)?n:null}
-function dt(v){if(v instanceof Date)return v;let d=new Date(v);return isNaN(d)?null:d}
+function dt(v){if(v instanceof Date)return v;let d=new Date(v);return isNaN(d)?null:d}function localStamp(d){const p=n=>String(n).padStart(2,'0');return {time:d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()),date:d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}}
 function fillSelect(id,values,all){let el=$(id),old=el.value;el.innerHTML='<option value="ALL">'+all+'</option>';values.forEach(v=>el.add(new Option(v,v)));if(values.includes(old))el.value=old}
 function load(){const f=$('file').files[0];if(!f){$('status').textContent='Pilih file Excel terlebih dahulu.';return}
 $('status').textContent='Membaca workbook...';const reader=new FileReader();reader.onload=e=>{try{
 const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});const sn=wb.SheetNames.includes('5G_cell_availability')?'5G_cell_availability':wb.SheetNames[0];const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:null});
 if(!arr.length)throw Error('Sheet tidak memiliki data.');const required=['Period start time','NRBTS name','NRCEL name',...specs.map(s=>s.key)];const missing=required.filter(k=>!(k in arr[0]));if(missing.length)throw Error('Kolom tidak ditemukan: '+missing.join(', '));
-DATA=arr.map(r=>{let d=dt(r['Period start time']);let x={time:d?d.toISOString().slice(0,16).replace('T',' '):'',date:d?d.toISOString().slice(0,10):'',ne:String(r['NRBTS name']??''),cell:String(r['NRCEL name']??'')};specs.forEach(s=>x[s.key]=num(r[s.key]));return x}).filter(x=>x.time);
+DATA=arr.map(r=>{let d=dt(r['Period start time']),stamp=d?localStamp(d):null;let x={time:stamp?stamp.time:'',date:stamp?stamp.date:'',ne:String(r['NRBTS name']??''),cell:String(r['NRCEL name']??'')};specs.forEach(s=>x[s.key]=num(r[s.key]));return x}).filter(x=>x.time);
 fillSelect('date',[...new Set(DATA.map(x=>x.date))].sort(),'Semua tanggal');fillSelect('ne',[...new Set(DATA.map(x=>x.ne))].sort(),'Semua NRBTS');fillSelect('cell',[...new Set(DATA.map(x=>x.cell))].sort(),'Semua NRCEL');
 $('date').value=[...new Set(DATA.map(x=>x.date))].sort().at(-1)||'ALL';render();$('status').innerHTML='<span class="good">Berhasil:</span> '+DATA.length.toLocaleString()+' record · '+new Set(DATA.map(x=>x.ne)).size+' NRBTS · '+new Set(DATA.map(x=>x.cell)).size+' NRCEL. File diproses lokal di browser.';
 }catch(err){DATA=[];$('status').innerHTML='<span class="error">Gagal membaca file: '+err.message+'</span>'}};reader.readAsArrayBuffer(f)}
